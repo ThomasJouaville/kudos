@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useActionData } from '@remix-run/react'
 import { ActionFunction, json, LoaderFunction, redirect } from '@remix-run/node'
 
 import {
@@ -77,12 +78,42 @@ export const action: ActionFunction = async ({ request }) => {
 const Login = () => {
   const [action, setAction] = useState('login')
 
+  const actionData = useActionData()
+  const [errors, setErrors] = useState(actionData?.errors || {})
+  const [formError, setFormError] = useState(actionData?.error || '')
+
+  const firstLoad = useRef(true)
+
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
+    email: actionData?.fields?.email || '',
+    password: actionData?.fields?.password || '',
+    firstName: actionData?.fields?.lastName || '',
+    lastName: actionData?.fields?.firstName || '',
   })
+
+  useEffect(() => {
+    if (!firstLoad.current) {
+      const newState = {
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+      }
+      setErrors(newState)
+      setFormError('')
+      setFormData(newState)
+    }
+  }, [action])
+
+  useEffect(() => {
+    if (!firstLoad.current) {
+      setFormError('')
+    }
+  }, [formData])
+
+  useEffect(() => {
+    firstLoad.current = false
+  }, [])
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -112,11 +143,15 @@ const Login = () => {
         </p>
 
         <form method='POST' className='rounded-2xl bg-gray-200 p-6 w-96'>
+          <div className='text-xs font-semibold text-center tracking-wide text-red-500 w-full'>
+            {formError}
+          </div>
           <FormField
             htmlFor='email'
             label='Email'
             value={formData.email}
             onChange={(e) => handleInputChange(e, 'email')}
+            error={errors?.email}
           />
           <FormField
             htmlFor='password'
@@ -124,6 +159,7 @@ const Login = () => {
             label='Password'
             value={formData.password}
             onChange={(e) => handleInputChange(e, 'password')}
+            error={errors?.password}
           />
 
           {action === 'register' && (
@@ -133,12 +169,14 @@ const Login = () => {
                 label='First Name'
                 onChange={(e) => handleInputChange(e, 'firstName')}
                 value={formData.firstName}
+                error={errors?.firstName}
               />
               <FormField
                 htmlFor='lastName'
                 label='Last Name'
                 onChange={(e) => handleInputChange(e, 'lastName')}
                 value={formData.lastName}
+                error={errors?.lastName}
               />
             </>
           )}
